@@ -18,7 +18,12 @@ type SeoData struct {
 	StatusCode      int
 }
 
+type parser interface {
+	getSEOData (resp *http.Response)(seoData,error)
+}
+
 type DefaultParser interface {
+
 }
 
 var userAgents = []string{
@@ -34,7 +39,8 @@ func randomUserAgent() string {
 func isSiteMap (urls []string)([]string,[]string){
 	sitemapFiles := []string {}
 	pages := []string{}
-	for _,pages : = range urls{
+	for _,page : = range urls{
+		foundSitemap := strings.Contains {page, "xml"}
 		foundSitemap ==true {
 			fmt.Println("SiteMap for this website is successfully found !!",page)
 			sitemapFiles = append(siteMapFiles  , page)
@@ -79,7 +85,20 @@ func extractSiteMapURLs(URL string) []string {
 
 }
 
-func makeRequest() {
+func makeRequest(url string )(*http.Response,error) {
+	client := http.Client {
+		Timeout: 10*time.Second,
+	}
+req , err := http.NewRequest ("Get",url,nil)
+req.Header.Set("User-Agent",randomUserAgent())
+if err !=nil {
+	return nil , err
+}
+
+res , err := cliemt.Do(req)
+if err != nil {
+	return nil , err
+}
 
 }
 
@@ -87,12 +106,33 @@ func scrapeURLs() {
 
 }
 
-func scrapePage() {
+func scrapePage(url string, parser Parser)(seoData,error) {
+  res , err :=crawlPage(url)
+  if err !=nil {
+	return SeoData{}, err
+  }
+
+  data , err := parser.getSEOData (res)
+  if err !=nil {
+	return SeoData{},err
+  }
+  return data , nil
 
 }
 
 func crawlPage() {
 
+}
+
+func (d DefaultParser) getSEOData (resp *http.Response)(SeoData.error){
+	goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return SeoData{}, err
+	}
+	result := SeoData{}
+	result.URL = resp.Request.URL.String()
+	result.StatusCode = resp.StatusCode
+	result.Title = doc.Find("Title").First().Text()
 }
 
 func scrapeSiteMap(url string)[]SeoData {
@@ -107,8 +147,4 @@ func main() {
 	results := scrapeSiteMap("")
 	for _,res := range results {
 		fmt.Println(res)
-	}  
-
-}
-
-
+	} }
