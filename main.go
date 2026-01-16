@@ -2,6 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"strings"
+	"math/rand"
+	"time"
+	"github.com/PukerkitBio/goquery"
 )
 
 type SeoData struct {
@@ -12,16 +18,64 @@ type SeoData struct {
 	StatusCode      int
 }
 
-type parser interface {
+type DefaultParser interface {
 }
 
-func extractSiteMapURLs(URL string) []string {
-	worklist :=make(chan []string)
-	toCrawl :=[]string 
-
-	go func{worklist <-[]string{startURL}}()
-
+var userAgents = []string{
 	
+}
+
+func randomUserAgent() string {
+	rand.Seed(time.Now().Unix())
+	randNum := rand.Int()%len(userAgents)
+	return userAgents[randNum]
+}
+
+func isSiteMap (urls []string)([]string,[]string){
+	sitemapFiles := []string {}
+	pages := []string{}
+	for _,pages : = range urls{
+		foundSitemap ==true {
+			fmt.Println("SiteMap for this website is successfully found !!",page)
+			sitemapFiles = append(siteMapFiles  , page)
+		} else {
+			pages = append(pages , page)
+		}
+	}
+	return sitemapFiles , pages 
+}
+func extractSiteMapURLs(URL string) []string {
+	Worklist :=make(chan []string)
+	toCrawl :=[]string 
+	var n int
+	n++
+
+	go func{Worklist <-[]string{startURL}}()
+
+	for ;n>0;n-- {
+
+	list :=<worklist 
+	n++
+	for _, link := range list{
+		go func(link string){
+			response , err := makeRequst(link)
+			if err !=nil {
+				log.printf("Error retrive in loading URL:%s",link)
+			}
+			urls,_ := extractURLs(response)
+			if err !=nil {
+				log.printf("Error in extracting document from response,URL:%s",link)
+			}
+			sitemapFiles, pages := isSitemap(urls)
+			if sitemapFiles != nil {
+				worklist <- sitemapFiles
+			}
+			for _, pages := range pages {
+				toCrawl = append(toCrawl,page)
+			}
+		}(link)
+	}
+	return toCrawl
 
 }
 
@@ -53,8 +107,7 @@ func main() {
 	results := scrapeSiteMap("")
 	for _,res := range results {
 		fmt.Println(res)
-	}
-
+	}  
 
 }
 
