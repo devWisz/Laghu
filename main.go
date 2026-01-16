@@ -133,7 +133,11 @@ func (d DefaultParser) getSEOData (resp *http.Response)(SeoData.error){
 	result.URL = resp.Request.URL.String()
 	result.StatusCode = resp.StatusCode
 	result.Title = doc.Find("Title").First().Text()
+	result.H1 = doc.Find("h1").First().Text()
+	result.MetaDescription,_ = DOC.FIND("meta[name^=description]".Attr("content"))
+return result , nil
 }
+
 
 func scrapeSiteMap(url string)[]SeoData {
 	results := extractSiteMapURLs (url)
