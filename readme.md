@@ -1,7 +1,88 @@
-#URL Sitemap crawler in golang which makes your life more easier and faster
+# Go SEO Sitemap Crawler
 
-#Features :
+A lightweight, concurrent SEO crawler written in Go that starts from a sitemap URL, discovers nested sitemaps, extracts page URLs, and collects essential SEO metadata from each page.
 
- 1. Automatically detects and extracts sitemap (.xml) URLs from a website
+The project is designed to demonstrate practical Go concurrency, clean interfaces, and real-world web crawling patterns.
 
- 2. Extracts basic SEO data (URL, status code, title, H1, meta description)
+---
+
+## Features
+
+* Recursive sitemap discovery from a starting sitemap URL
+* Concurrent crawling with configurable concurrency limits
+* Pluggable SEO parser via a clean interface
+* Extraction of core SEO metadata (title, H1, meta description, status code)
+* Rotating User-Agent headers
+* HTTP request timeouts for stability
+
+## Installation
+
+### Prerequisites
+
+* Go **1.20+** (recommended)
+* Internet connection
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/go-seo-sitemap-crawler.git
+cd go-seo-sitemap-crawler
+```
+
+### Install Dependencies
+
+```bash
+go mod init go-seo-sitemap-crawler
+go get github.com/PuerkitoBio/goquery
+```
+
+---
+
+## How to Run
+
+1. Update the sitemap URL in `main.go`
+
+```go
+results := ScrapeSitemap("https://example.com/sitemap.xml", p, 10)
+```
+
+2. Run the program
+
+```bash
+go run main.go
+```
+
+The crawler will fetch all sitemap URLs, scrape pages concurrently, and print SEO data to standard output.
+
+
+## Benefits
+
+* Quickly audit SEO metadata across all sitemap pages
+* Efficient crawling using controlled concurrency
+* Easy to extend with custom parsers or exporters
+* Suitable for learning and experimenting with Go concurrency patterns
+
+---
+
+## Limitations
+
+* No robots.txt handling
+* No URL deduplication
+* No retry or backoff strategy
+* Results are printed to stdout only
+
+---
+
+## Disclaimer
+
+Use responsibly. Crawling aggressive sites without permission can get your IP blocked.
+
+---
+
+## License
+Can be use for any purposes . Open source . Feel free to use.
+
+## Developed By
+Sarjak Khanal
+
+
