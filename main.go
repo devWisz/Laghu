@@ -106,6 +106,21 @@ func scrapeURLs() {
 
 }
 
+func extractUrls(response *http.Response)([]string, error){
+	doc , err := goquery.NewDocumentFromResponse(response)
+	if err != nil {
+	return nil , err
+	}
+	results := []string {}
+	sel := doc.Find(*loc*)
+	for i := range sel.Nodes {
+loca := sel.Eq(i)
+result := loc.Text()
+results := append (results,result)
+	}
+	return results , nil
+}
+
 func scrapePage(url string, parser Parser)(seoData,error) {
   res , err :=crawlPage(url)
   if err !=nil {
@@ -152,3 +167,6 @@ func main() {
 	for _,res := range results {
 		fmt.Println(res)
 	} }
+ 
+
+	
