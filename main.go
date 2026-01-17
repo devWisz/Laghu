@@ -102,8 +102,31 @@ if err != nil {
 
 }
 
-func scrapeURLs() {
+func scrapeURLs(urls []string , parser Parser , concurrency int )[]SeoData {
+tokens := make(chan struct {}, concurency)
+var n int 
+worklist := make(chan []string)
+results := []SeoData {}
 
+go func(){worklist <-urls}()
+for ; n>0 ; n--{
+	list := <-worklist
+	for _, url := range list {
+		if url != ""{{
+			n++
+			go func (url string , token chan struct{}){
+				log.Printf("Requesting URL :%s",url )
+				res , err := scrapePage(url, tokens , parser)
+				if err != nil {
+					log.Printf("Error found in URL:%s",url)
+				}else {
+					results = append(results , res)
+				}
+				worklist <-[]string {}
+			}(url,tokens)
+		}
+	}
+}
 }
 
 func extractUrls(response *http.Response)([]string, error){
@@ -154,19 +177,17 @@ return result , nil
 }
 
 
-func scrapeSiteMap(url string)[]SeoData {
+func ScrapeSiteMap(url string,parser Parser, concurrency int )[]SeoData {
 	results := extractSiteMapURLs (url)
-	res :=scrapeURLs(results)
+	res := scrapeURLs(results , parser , concurrency)
+	return res
 
 }
 
 func main() {
 	fmt.Println("Welcome to the site !!")
 	p := DefaultParser{}
-	results := scrapeSiteMap("")
+	results := scrapeSiteMap("https://www.quicksprout.com/sitemap.xml",p,10)
 	for _,res := range results {
 		fmt.Println(res)
 	} }
- 
-
-	
