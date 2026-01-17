@@ -2,9 +2,9 @@ Go SEO Sitemap Crawler
 
 A lightweight, concurrent SEO crawler written in Go that starts from a sitemap URL, discovers nested sitemaps, extracts page URLs, and collects essential SEO metadata from each page.
 
-The project is designed to demonstrate practical Go concurrency, clean interfaces, and real-world web crawling patterns.
 
- Features
+
+Features
 
 * Recursive sitemap discovery from a starting sitemap URL
 * Concurrent crawling with configurable concurrency limits
@@ -75,9 +75,8 @@ Use responsibly. Crawling aggressive sites without permission can get your IP bl
 
 ---
 ## License
-Can be used for any purposes. Open source. Feel free to use.
+Can be used for any purposes. Open source to use and modify.
 
-## Developed By
-Sarjak Khanal
-
+## Developed and Concept By
+devWisZ aka Sarjak Khanal
 

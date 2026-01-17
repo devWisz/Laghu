@@ -191,8 +191,9 @@ func ScrapeSitemap(url string, parser Parser, concurrency int) []SeoData {
 
 func main() {
 	p := DefaultParser{}
-	results := ScrapeSitemap("https://www.quicksprout.com/sitemap.xml", p, 10)
+	results := ScrapeSitemap("https://openai.com/sitemap.xml", p, 10)
 	for _, res := range results {
 		fmt.Println(res)
 	}
 }     
+
