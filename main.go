@@ -19,7 +19,7 @@ type SeoData struct {
 }
 
 type parser interface {
-	getSEOData (resp *http.Response)(seoData,error)
+	getSEOData (resp *http.Response)(SeoData,error)
 }
 
 type DefaultParser interface {
@@ -127,6 +127,7 @@ for ; n>0 ; n--{
 		}
 	}
 }
+return results
 }
 
 func extractUrls(response *http.Response)([]string, error){
@@ -137,14 +138,14 @@ func extractUrls(response *http.Response)([]string, error){
 	results := []string {}
 	sel := doc.Find(*loc*)
 	for i := range sel.Nodes {
-loca := sel.Eq(i)
+loc := sel.Eq(i)
 result := loc.Text()
 results := append (results,result)
 	}
 	return results , nil
 }
 
-func scrapePage(url string, parser Parser)(seoData,error) {
+func scrapePage(url string, token chan struct{},parser Parser)(seoData,error) {
   res , err :=crawlPage(url)
   if err !=nil {
 	return SeoData{}, err
@@ -158,8 +159,14 @@ func scrapePage(url string, parser Parser)(seoData,error) {
 
 }
 
-func crawlPage() {
-
+func crawlPage(url string , tokens chan struct{})(*http.Response, error) {
+tokens <-struct{}{}
+resp , err :=makeRequest(url)
+<-tokens
+if err != nil {
+	return nil,err
+}
+return resp, err
 }
 
 func (d DefaultParser) getSEOData (resp *http.Response)(SeoData.error){
@@ -172,7 +179,7 @@ func (d DefaultParser) getSEOData (resp *http.Response)(SeoData.error){
 	result.StatusCode = resp.StatusCode
 	result.Title = doc.Find("Title").First().Text()
 	result.H1 = doc.Find("h1").First().Text()
-	result.MetaDescription,_ = DOC.FIND("meta[name^=description]".Attr("content"))
+	result.MetaDescription,_ = DOC.Find("meta[name^=description]".Attr("content"))
 return result , nil
 }
 
@@ -187,7 +194,7 @@ func ScrapeSiteMap(url string,parser Parser, concurrency int )[]SeoData {
 func main() {
 	fmt.Println("Welcome to the site !!")
 	p := DefaultParser{}
-	results := scrapeSiteMap("https://www.quicksprout.com/sitemap.xml",p,10)
+	results := ScrapeSiteMap("https://www.quicksprout.com/sitemap.xml",p,10)
 	for _,res := range results {
 		fmt.Println(res)
 	} }
