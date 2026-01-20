@@ -78,5 +78,4 @@ Use responsibly. Crawling aggressive sites without permission can get your IP bl
 Can be used for any purposes. Open source to use and modify.
 
 ## Developed and Concept By
-devWisZ aka Sarjak Khanal
-
+devWisZ aka Sarjak Khanal 
