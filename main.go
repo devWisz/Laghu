@@ -1,27 +1,35 @@
- package main
+package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
 type SeoData struct {
-	URL             string
-	Title           string
-	H1              string
-	MetaDescription string
-	StatusCode      int
+	URL             string `json:"url"`
+	Title           string `json:"title"`
+	H1              string `json:"h1"`
+	MetaDescription string `json:"meta_description"`
+	StatusCode      int    `json:"status_code"`
+}
+
+type SeoReport struct {
+	ScrapedAt time.Time `json:"scraped_at"`
+	TotalURLs int       `json:"total_urls"`
+	Results   []SeoData `json:"results"`
 }
 
 type Parser interface {
 	GetSeoData(resp *http.Response) (SeoData, error)
 }
-
 
 type DefaultParser struct {
 }
@@ -168,6 +176,7 @@ func crawlPage(url string, tokens chan struct{}) (*http.Response, error) {
 	}
 	return resp, err
 }
+
 func (d DefaultParser) GetSeoData(resp *http.Response) (SeoData, error) {
 	doc, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
@@ -182,6 +191,55 @@ func (d DefaultParser) GetSeoData(resp *http.Response) (SeoData, error) {
 	return result, nil
 }
 
+func SaveToJSON(data []SeoData, filename string) error {
+	report := SeoReport{
+		ScrapedAt: time.Now(),
+		TotalURLs: len(data),
+		Results:   data,
+	}
+
+	jsonData, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshaling data: %v", err)
+	}
+
+	err = os.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing file: %v", err)
+	}
+
+	log.Printf("Successfully saved %d URLs to %s", len(data), filename)
+	return nil
+}
+func SaveURLsOnlyToJSON(data []SeoData, filename string) error {
+	urls := make([]string, len(data))
+	for i, item := range data {
+		urls[i] = item.URL
+	}
+
+	urlReport := struct {
+		ScrapedAt time.Time `json:"scraped_at"`
+		TotalURLs int       `json:"total_urls"`
+		URLs      []string  `json:"urls"`
+	}{
+		ScrapedAt: time.Now(),
+		TotalURLs: len(urls),
+		URLs:      urls,
+	}
+
+	jsonData, err := json.MarshalIndent(urlReport, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshaling data: %v", err)
+	}
+
+	err = os.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing file: %v", err)
+	}
+
+	log.Printf("Successfully saved %d URLs to %s", len(urls), filename)
+	return nil
+}
 
 func ScrapeSitemap(url string, parser Parser, concurrency int) []SeoData {
 	results := extractSitemapURLs(url)
@@ -192,7 +250,19 @@ func ScrapeSitemap(url string, parser Parser, concurrency int) []SeoData {
 func main() {
 	p := DefaultParser{}
 	results := ScrapeSitemap("https://openai.com/sitemap.xml", p, 10)
+
 	for _, res := range results {
 		fmt.Println(res)
 	}
-}     
+
+	err := SaveToJSON(results, "seo_report.json")
+	if err != nil {
+		log.Printf("Error saving SEO report: %v", err)
+	}
+
+
+	err = SaveURLsOnlyToJSON(results, "urls_only.json")
+	if err != nil {
+		log.Printf("Error saving URLs: %v", err)
+	}
+} 
