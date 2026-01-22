@@ -4,6 +4,7 @@ A lightweight, concurrent SEO crawler written in Go that starts from a sitemap U
 
 
 
+
 Features
 
 * Recursive sitemap discovery from a starting sitemap URL
@@ -51,6 +52,10 @@ go run main.go
 The crawler will fetch all sitemap URLs, scrape pages concurrently, and print SEO data to standard output.
 
 
+FOR LINUX SEE THE ASSESTS FILE : 
+
+Can be used for both Windows and linux.
+
 ## Benefits
 
 * Quickly audit SEO metadata across all sitemap pages
@@ -77,5 +82,6 @@ Use responsibly. Crawling aggressive sites without permission can get your IP bl
 ## License
 Can be used for any purposes. Open source to use and modify.
 
-## Developed and Concept By
+
+## Developed and Concept By :
 devWisZ aka Sarjak Khanal 
