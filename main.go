@@ -219,6 +219,6 @@ func main() {
 		SaveURLsOnlyToJSON(results, "urls_only.json")
 		fmt.Println("Files saved successfully.")
 	} else {
-		fmt.Println("Thanks for using the Laghu.")
+		fmt.Println("Thanks for using Laghu.")
 	}
 }
