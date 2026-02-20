@@ -84,4 +84,4 @@ Can be used for any purposes. Open source to use and modify.
 
 
 ## Developed and Concept By :
-devWisZ aka Sarjak Khanal 
+devWisZ aka Sarjak Khanal  

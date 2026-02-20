@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -31,113 +30,27 @@ type Parser interface {
 	GetSeoData(resp *http.Response) (SeoData, error)
 }
 
-type DefaultParser struct {
-}
+type DefaultParser struct{}
 
 var userAgents = []string{
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
-	"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Safari/604.1.38",
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Safari/604.1.38",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13)",
+	"Mozilla/5.0 (X11; Linux x86_64)",
 }
 
 func randomUserAgent() string {
-	rand.Seed(time.Now().Unix())
-	randNum := rand.Int() % len(userAgents)
-	return userAgents[randNum]
-}
-
-func isSitemap(urls []string) ([]string, []string) {
-	sitemapFiles := []string{}
-	pages := []string{}
-	for _, page := range urls {
-		foundSitemap := strings.Contains(page, "xml")
-		if foundSitemap == true {
-			fmt.Println("Found Sitemap", page)
-			sitemapFiles = append(sitemapFiles, page)
-		} else {
-			pages = append(pages, page)
-		}
-	}
-	return sitemapFiles, pages
-}
-
-func extractSitemapURLs(startURL string) []string {
-	worklist := make(chan []string)
-	toCrawl := []string{}
-	var n int
-	n++
-	go func() { worklist <- []string{startURL} }()
-	for ; n > 0; n-- {
-		list := <-worklist
-		for _, link := range list {
-			n++
-			go func(link string) {
-				response, err := makeRequest(link)
-				if err != nil {
-					log.Printf("Error retrieving URL: %s", link)
-				}
-				urls, _ := extractUrls(response)
-				if err != nil {
-					log.Printf("Error extracting document from response, URL: %s", link)
-				}
-				sitemapFiles, pages := isSitemap(urls)
-				if sitemapFiles != nil {
-					worklist <- sitemapFiles
-				}
-				for _, page := range pages {
-					toCrawl = append(toCrawl, page)
-				}
-			}(link)
-		}
-	}
-	return toCrawl
+	rand.Seed(time.Now().UnixNano())
+	return userAgents[rand.Intn(len(userAgents))]
 }
 
 func makeRequest(url string) (*http.Response, error) {
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
+	client := http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("User-Agent", randomUserAgent())
-	if err != nil {
-		return nil, err
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func scrapeUrls(urls []string, parser Parser, concurrency int) []SeoData {
-	tokens := make(chan struct{}, concurrency)
-	var n int
-	n++
-	worklist := make(chan []string)
-	results := []SeoData{}
-	go func() { worklist <- urls }()
-	for ; n > 0; n-- {
-		list := <-worklist
-		for _, url := range list {
-			if url != "" {
-				n++
-				go func(url string, token chan struct{}) {
-					log.Printf("Requesting URL: %s", url)
-					res, err := scrapePage(url, tokens, parser)
-					if err != nil {
-						log.Printf("Encountered error, URL: %s", url)
-					} else {
-						results = append(results, res)
-					}
-					worklist <- []string{}
-				}(url, tokens)
-			}
-		}
-	}
-	return results
+	return client.Do(req)
 }
 
 func extractUrls(response *http.Response) ([]string, error) {
@@ -145,36 +58,83 @@ func extractUrls(response *http.Response) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	results := []string{}
-	sel := doc.Find("loc")
-	for i := range sel.Nodes {
-		loc := sel.Eq(i)
-		result := loc.Text()
-		results = append(results, result)
-	}
-	return results, nil
+	var urls []string
+	doc.Find("loc").Each(func(_ int, s *goquery.Selection) {
+		urls = append(urls, strings.TrimSpace(s.Text()))
+	})
+	return urls, nil
 }
 
-func scrapePage(url string, token chan struct{}, parser Parser) (SeoData, error) {
-	res, err := crawlPage(url, token)
-	if err != nil {
-		return SeoData{}, err
+func isSitemap(urls []string) ([]string, []string) {
+	var sitemaps, pages []string
+	for _, u := range urls {
+		if strings.Contains(u, ".xml") {
+			sitemaps = append(sitemaps, u)
+		} else {
+			pages = append(pages, u)
+		}
 	}
-	data, err := parser.GetSeoData(res)
-	if err != nil {
-		return SeoData{}, err
-	}
-	return data, nil
+	return sitemaps, pages
 }
 
-func crawlPage(url string, tokens chan struct{}) (*http.Response, error) {
-	tokens <- struct{}{}
+func extractSitemapURLs(startURL string) []string {
+	worklist := make(chan []string)
+	var result []string
+	var n int
+
+	n++
+	go func() { worklist <- []string{startURL} }()
+
+	for ; n > 0; n-- {
+		list := <-worklist
+		for _, link := range list {
+			n++
+			go func(link string) {
+				defer func() { worklist <- nil }()
+				resp, err := makeRequest(link)
+				if err != nil {
+					return
+				}
+				urls, _ := extractUrls(resp)
+				sitemaps, pages := isSitemap(urls)
+				if len(sitemaps) > 0 {
+					worklist <- sitemaps
+				}
+				result = append(result, pages...)
+			}(link)
+		}
+	}
+	return result
+}
+
+func scrapePage(url string, parser Parser) (SeoData, error) {
 	resp, err := makeRequest(url)
-	<-tokens
 	if err != nil {
-		return nil, err
+		return SeoData{}, err
 	}
-	return resp, err
+	return parser.GetSeoData(resp)
+}
+
+func scrapeUrls(urls []string, parser Parser, concurrency int) []SeoData {
+	tokens := make(chan struct{}, concurrency)
+	results := []SeoData{}
+
+	for _, url := range urls {
+		tokens <- struct{}{}
+		go func(u string) {
+			defer func() { <-tokens }()
+			data, err := scrapePage(u, parser)
+			if err == nil {
+				results = append(results, data)
+			}
+		}(url)
+	}
+
+	for i := 0; i < cap(tokens); i++ {
+		tokens <- struct{}{}
+	}
+
+	return results
 }
 
 func (d DefaultParser) GetSeoData(resp *http.Response) (SeoData, error) {
@@ -182,13 +142,15 @@ func (d DefaultParser) GetSeoData(resp *http.Response) (SeoData, error) {
 	if err != nil {
 		return SeoData{}, err
 	}
-	result := SeoData{}
-	result.URL = resp.Request.URL.String()
-	result.StatusCode = resp.StatusCode
-	result.Title = doc.Find("title").First().Text()
-	result.H1 = doc.Find("h1").First().Text()
-	result.MetaDescription, _ = doc.Find("meta[name^=description]").Attr("content")
-	return result, nil
+
+	data := SeoData{
+		URL:        resp.Request.URL.String(),
+		StatusCode: resp.StatusCode,
+		Title:      doc.Find("title").First().Text(),
+		H1:         doc.Find("h1").First().Text(),
+	}
+	data.MetaDescription, _ = doc.Find("meta[name=description]").Attr("content")
+	return data, nil
 }
 
 func SaveToJSON(data []SeoData, filename string) error {
@@ -197,72 +159,66 @@ func SaveToJSON(data []SeoData, filename string) error {
 		TotalURLs: len(data),
 		Results:   data,
 	}
-
-	jsonData, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error marshaling data: %v", err)
-	}
-
-	err = os.WriteFile(filename, jsonData, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing file: %v", err)
-	}
-
-	log.Printf("Successfully saved %d URLs to %s", len(data), filename)
-	return nil
+	bytes, _ := json.MarshalIndent(report, "", "  ")
+	return os.WriteFile(filename, bytes, 0644)
 }
-func SaveURLsOnlyToJSON(data []SeoData, filename string) error {
-	urls := make([]string, len(data))
-	for i, item := range data {
-		urls[i] = item.URL
-	}
 
-	urlReport := struct {
+func SaveURLsOnlyToJSON(data []SeoData, filename string) error {
+	var urls []string
+	for _, d := range data {
+		urls = append(urls, d.URL)
+	}
+	report := struct {
 		ScrapedAt time.Time `json:"scraped_at"`
 		TotalURLs int       `json:"total_urls"`
 		URLs      []string  `json:"urls"`
-	}{
-		ScrapedAt: time.Now(),
-		TotalURLs: len(urls),
-		URLs:      urls,
-	}
+	}{time.Now(), len(urls), urls}
 
-	jsonData, err := json.MarshalIndent(urlReport, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error marshaling data: %v", err)
-	}
+	bytes, _ := json.MarshalIndent(report, "", "  ")
+	return os.WriteFile(filename, bytes, 0644)
+}
 
-	err = os.WriteFile(filename, jsonData, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing file: %v", err)
-	}
+func askYesNo(question string) bool {
+	var input string
+	fmt.Printf("%s (y/n): ", question)
+	fmt.Scanln(&input)
+	input = strings.ToLower(strings.TrimSpace(input))
+	return input == "y" || input == "yes"
+}
 
-	log.Printf("Successfully saved %d URLs to %s", len(urls), filename)
-	return nil
+func printSummary(results []SeoData, start time.Time) {
+	fmt.Println("\nScraping Summary")
+	fmt.Println("-----------------------------")
+	fmt.Printf("Total scraped URLs : %d\n", len(results))
+	fmt.Printf("Time taken         : %v\n", time.Since(start))
+	fmt.Println("-----------------------------")
 }
 
 func ScrapeSitemap(url string, parser Parser, concurrency int) []SeoData {
-	results := extractSitemapURLs(url)
-	res := scrapeUrls(results, parser, concurrency)
-	return res
+	urls := extractSitemapURLs(url)
+	return scrapeUrls(urls, parser, concurrency)
 }
 
 func main() {
-	p := DefaultParser{}
-	results := ScrapeSitemap("https://openai.com/sitemap.xml", p, 10)
+	start := time.Now()
+	parser := DefaultParser{}
 
-	for _, res := range results {
-		fmt.Println(res)
+	fmt.Println("Starting sitemap scraping...\n")
+
+	results := ScrapeSitemap("https://openai.com/sitemap.xml", parser, 10)
+
+	printSummary(results, start)
+
+	if len(results) == 0 {
+		fmt.Println("No URLs scraped. Exiting.")
+		return
 	}
 
-	err := SaveToJSON(results, "seo_report.json")
-	if err != nil {
-		log.Printf("Error saving SEO report: %v", err)
+	if askYesNo("Do you want to download the scraped reports") {
+		SaveToJSON(results, "seo_report.json")
+		SaveURLsOnlyToJSON(results, "urls_only.json")
+		fmt.Println("Files saved successfully.")
+	} else {
+		fmt.Println("Thanks for using the Laghu.")
 	}
-
-
-	err = SaveURLsOnlyToJSON(results, "urls_only.json")
-	if err != nil {
-		log.Printf("Error saving URLs: %v", err)
-	}
-} 
+}
